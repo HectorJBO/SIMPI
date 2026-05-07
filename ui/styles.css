@@ -1,0 +1,18 @@
+.main {
+    background-color: #0f172a;
+    color: white;
+}
+
+.metric-card {
+    background-color: #1e293b;
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+}
+
+.alert-critical {
+    background-color: #7f1d1d;
+    padding: 10px;
+    border-radius: 10px;
+    color: white;
+}

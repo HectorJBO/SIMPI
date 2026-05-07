@@ -2,7 +2,7 @@ from sklearn.ensemble import IsolationForest
 import numpy as np
 
 def preparar_datos(data):
-    return data.reshape(-1, 1)
+    return data.values if hasattr(data, 'values') else data
 
 def entrenar_modelo(X, contamination=0.02):
     modelo = IsolationForest(contamination=contamination, random_state=42)
@@ -10,8 +10,10 @@ def entrenar_modelo(X, contamination=0.02):
 
     return modelo
 
-def detectar_anomalias(modelo, x):
-    pred = modelo.predict(x)
-    indices = np.where(pred == -1)
+def predecir(modelo, x):
+    return modelo.predict(x)
 
+def detectar_anomalias(predicciones):
+    # Returns the indices where the prediction is -1 (anomaly)
+    indices = np.where(predicciones == -1)
     return indices

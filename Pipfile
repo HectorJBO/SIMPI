@@ -4,11 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-numpy = "*"
 pandas = "*"
 matplotlib = "*"
 scikit-learn = "*"
 streamlit = "*"
+numpy = "*"
+streamlit-option-menu = "*"
 
 [dev-packages]
 
