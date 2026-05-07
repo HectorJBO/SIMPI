@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from streamlit_option_menu import option_menu
 
 from app.data import generar_datos
-from app.model import preparar_datos, entrenar_modelo,detectar_anomalias, predecir
+from app.model import preparar_datos, entrenar_modelo, predecir, detectar_anomalias
 
 from ui.components import metric_card, alerta_critica
 
@@ -19,12 +19,10 @@ st.set_page_config(
     layout="wide"
 )
 
-with open("ui/styles.css") as f:
+with open(os.path.join(os.path.dirname(__file__), "styles.css")) as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-
 with st.sidebar:
-
     seleccion = option_menu(
         "SIMPI",
         [
@@ -42,93 +40,101 @@ with st.sidebar:
         default_index=0
     )
 
+    st.divider()
+    n = st.slider("Cantidad de datos", 100, 2000, 1000)
+    contamination = st.slider("Nivel de anomalías (%)", 1, 10, 2) / 100
+
 st.title("SIMPI")
 st.subheader("Sistema Inteligente de Monitoreo Predictivo Industrial")
 
-datos, anomalias_reales = generar_datos()
+if seleccion == "Dashboard":
+    datos, anomalias_reales = generar_datos(n, contamination)
 
-sensor = st.selectbox(
-    "Selecciona un sensor",
-    datos.columns
-)
+    sensor = st.selectbox("Selecciona un sensor", datos.columns)
 
-X = preparar_datos(datos)
+    X = preparar_datos(datos)
+    modelo = entrenar_modelo(X, contamination)
+    predicciones = predecir(modelo, X)
+    anomalias = detectar_anomalias(predicciones)
 
-modelo = entrenar_modelo(X)
+    col1, col2, col3, col4 = st.columns(4)
 
-predicciones = predecir(modelo, X)
+    with col1:
+        metric_card("Sensores Activos", "12")
 
-anomalias = detectar_anomalias(predicciones)
+    with col2:
+        metric_card("Anomalías", len(anomalias))
 
+    with col3:
+        metric_card("Estado", "ÓPTIMO")
 
-col1, col2, col3, col4 = st.columns(4)
+    with col4:
+        metric_card("Riesgo", "72%")
 
-with col1:
-    metric_card("Sensores Activos", "12")
+    st.divider()
 
-with col2:
-    metric_card("Anomalías", len(anomalias[0]))
+    col1, col2 = st.columns([3, 1])
 
-with col3:
-    metric_card("Estado", "ÓPTIMO")
+    with col1:
+        fig, ax = plt.subplots(figsize=(12, 5))
 
-with col4:
-    metric_card("Riesgo", "72%")
+        ax.plot(
+            datos[sensor],
+            label=sensor.capitalize()
+        )
 
-st.divider()
+        ax.scatter(
+            anomalias,
+            datos[sensor].iloc[anomalias],
+            color="red",
+            label="Anomalías"
+        )
 
+        ax.set_title(f"Monitoreo de {sensor}")
+        ax.legend()
 
-col1, col2 = st.columns([3, 1])
+        st.pyplot(fig)
 
-with col1:
+    with col2:
+        st.subheader("Alertas")
 
-    fig, ax = plt.subplots(figsize=(12, 5))
+        alerta_critica("Temperatura crítica detectada")
+        st.warning("Vibración fuera del rango")
+        st.success("Sistema operativo")
 
-    ax.plot(
-        datos[sensor],
-        label=sensor.capitalize()
-    )
+elif seleccion == "Monitoreo":
+    datos, anomalias_reales = generar_datos(n, contamination)
 
-    ax.scatter(
-        anomalias[0],
-        datos[sensor].iloc[anomalias[0]],
-        color="red",
-        label="Anomalías"
-    )
+    st.subheader("Monitoreo en Tiempo Real")
 
-    ax.set_title(f"Monitoreo de {sensor}")
+    cols = st.columns(2)
+    for i, sensor in enumerate(datos.columns):
+        with cols[i % 2]:
+            fig, ax = plt.subplots(figsize=(8, 3))
+            ax.plot(datos[sensor], label=sensor.capitalize())
+            ax.set_title(sensor.capitalize())
+            ax.legend()
+            st.pyplot(fig)
 
-    ax.legend()
+elif seleccion == "Alertas":
+    st.subheader("Centro de Alertas")
 
-    st.pyplot(fig)
+    datos, anomalias_reales = generar_datos(n, contamination)
+    X = preparar_datos(datos)
+    modelo = entrenar_modelo(X, contamination)
+    predicciones = predecir(modelo, X)
+    anomalias = detectar_anomalias(predicciones)
 
-    """fig, ax = plt.subplots(figsize=(12, 5))
+    st.metric("Total de anomalías detectadas", len(anomalias))
 
-    ax.plot(datos, label="Temperatura")
-    ax.scatter(
-        anomalias[0],
-        datos[anomalias[0]],
-        color="red",
-        label="Anomalías"
-    )
+    if len(anomalias) > 0:
+        for col in datos.columns:
+            indices_col = list(set(anomalias_reales[col]))
+            if indices_col:
+                alerta_critica(f"{col.capitalize()} - {len(indices_col)} anomalía(s) detectada(s)")
+    else:
+        st.success("No se detectaron anomalías")
 
-    ax.legend()
-
-    st.pyplot(fig)"""
-
-with col2:
-
-    st.subheader("Alertas")
-
-    alerta_critica("Temperatura crítica detectada")
-
-    st.warning("Vibración fuera del rango")
-
-    st.success("Sistema operativo")
-
-with col2:
-    metric_card(
-        "Anomalías",
-        len(anomalias[0])
-    )
-    
+elif seleccion == "Historial":
+    st.subheader("Historial de Mediciones")
+    st.info("Sección en desarrollo")
